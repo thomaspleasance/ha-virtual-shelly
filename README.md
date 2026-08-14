@@ -27,8 +27,15 @@ The integration source is in `custom_components/virtual_shelly`. The development
    ```yaml
    virtual_shelly:
      name: Virtual Shelly Pro 4PM
-     port: 8124
+     port: 80
+     power_entities:
+       1: sensor.channel_1_power
+       2: sensor.channel_2_power
+       3: sensor.channel_3_power
+       4: sensor.channel_4_power
    ```
+
+`power_entities` is optional. Map any or all channel numbers to Home Assistant power sensors. Values reported in mW, W, kW, or MW are converted to watts for Shelly's `apower` response; missing or unavailable sensors report `0 W`.
 
 ## Try the virtual device
 

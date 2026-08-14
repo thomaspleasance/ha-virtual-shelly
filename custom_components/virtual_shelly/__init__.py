@@ -12,7 +12,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.discovery import async_load_platform
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_PORT, DEFAULT_NAME, DEFAULT_PORT, DOMAIN
+from .const import CONF_PORT, CONF_POWER_ENTITIES, DEFAULT_NAME, DEFAULT_PORT, DOMAIN
 from .device import VirtualShellyPro4PM
 from .mdns import ShellyMdnsAdvertiser
 from .server import ShellyRpcServer
@@ -25,6 +25,9 @@ CONFIG_SCHEMA = vol.Schema(
             {
                 vol.Optional("name", default=DEFAULT_NAME): cv.string,
                 vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
+                vol.Optional(CONF_POWER_ENTITIES, default={}): {
+                    vol.All(vol.Coerce(int), vol.Range(min=1, max=4)): cv.entity_id,
+                },
             }
         )
     },
@@ -35,7 +38,27 @@ CONFIG_SCHEMA = vol.Schema(
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up Virtual Shelly from YAML."""
     integration_config = config[DOMAIN]
-    device = VirtualShellyPro4PM(integration_config["name"])
+    power_entities = integration_config[CONF_POWER_ENTITIES]
+
+    def _read_power(channel: int) -> float:
+        entity_id = power_entities.get(channel + 1)
+        state = hass.states.get(entity_id) if entity_id else None
+        if state is None or state.state in {"unknown", "unavailable"}:
+            return 0.0
+        try:
+            value = float(state.state)
+        except (TypeError, ValueError):
+            return 0.0
+        unit = state.attributes.get("unit_of_measurement")
+        multipliers = {
+            "mW": 0.001,
+            "W": 1.0,
+            "kW": 1000.0,
+            "MW": 1_000_000.0,
+        }
+        return round(value * multipliers.get(unit, 1.0), 3)
+
+    device = VirtualShellyPro4PM(integration_config["name"], _read_power)
     server = ShellyRpcServer(device, integration_config[CONF_PORT])
     advertiser = ShellyMdnsAdvertiser(hass, integration_config[CONF_PORT])
 

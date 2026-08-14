@@ -7,14 +7,16 @@ from collections.abc import Callable
 from .const import CHANNEL_COUNT, DEVICE_ID, DEVICE_MAC, DEVICE_MODEL_ID, VERSION
 
 StateListener = Callable[[int], None]
+PowerReader = Callable[[int], float]
 
 
 class VirtualShellyPro4PM:
     """Represent the four relay outputs of a Shelly Pro 4PM."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, power_reader: PowerReader | None = None) -> None:
         self.name = name
         self.states = [False] * CHANNEL_COUNT
+        self._power_reader = power_reader or (lambda _channel: 0.0)
         self._listeners: set[StateListener] = set()
 
     def add_listener(self, listener: StateListener) -> Callable[[], None]:
@@ -43,7 +45,7 @@ class VirtualShellyPro4PM:
             "id": channel,
             "source": "http",
             "output": self.states[channel],
-            "apower": 0.0,
+            "apower": self._power_reader(channel),
             "voltage": 230.0,
             "current": 0.0,
             "freq": 50.0,

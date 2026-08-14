@@ -8,7 +8,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .const import CHANNEL_COUNT, DEVICE_ID, DEVICE_MODEL, DOMAIN
+from .const import CHANNEL_COUNT, DEVICE_ID, DEVICE_MODEL, DOMAIN, VERSION
 from .device import VirtualShellyPro4PM
 
 
@@ -39,7 +39,7 @@ class VirtualShellySwitch(SwitchEntity):
             name=device.name,
             manufacturer="Shelly (virtual)",
             model=DEVICE_MODEL,
-            sw_version="0.1.0",
+            sw_version=VERSION,
         )
         self._remove_listener = None
 
