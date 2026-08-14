@@ -1,0 +1,11 @@
+{
+  "domain": "virtual_shelly",
+  "name": "Virtual Shelly",
+  "codeowners": [],
+  "dependencies": ["network", "zeroconf"],
+  "documentation": "https://github.com/thomaspleasance/ha-virtual-shelly",
+  "issue_tracker": "https://github.com/thomaspleasance/ha-virtual-shelly/issues",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "version": "0.1.0"
+}

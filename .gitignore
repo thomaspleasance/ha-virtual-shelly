@@ -216,3 +216,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Home Assistant development runtime files
+config/.HA_VERSION
+config/.ha_run.lock
+config/.storage/
+config/automations.yaml
+config/blueprints/
+config/deps/
+config/home-assistant.log*
+config/home-assistant_v2.db*
+config/scenes.yaml
+config/scripts.yaml
+config/secrets.yaml
+config/tts/

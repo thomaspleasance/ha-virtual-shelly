@@ -1,0 +1,11 @@
+default_config:
+
+# Load the integration during development so startup catches import errors.
+virtual_shelly:
+  name: Virtual Shelly Pro 4PM
+  port: 8124
+
+logger:
+  default: info
+  logs:
+    custom_components.virtual_shelly: debug
