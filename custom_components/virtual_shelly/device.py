@@ -54,10 +54,8 @@ class VirtualShellyPro4PM:
     def device_info(self) -> dict:
         """Return the Gen2 device-information response."""
         return {
-            "name": self.name,
             "id": DEVICE_ID,
             "mac": DEVICE_MAC,
-            "slot": 0,
             "model": DEVICE_MODEL_ID,
             "gen": 2,
             "fw_id": f"virtual-{VERSION}",
@@ -65,7 +63,8 @@ class VirtualShellyPro4PM:
             "app": "FourPro",
             "auth_en": False,
             "auth_domain": None,
-            "profile": "switch",
+            "discoverable": False,
+            "enhanced_security": False,
         }
 
     @staticmethod

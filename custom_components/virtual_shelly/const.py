@@ -1,12 +1,12 @@
 """Constants for Virtual Shelly."""
 
 DOMAIN = "virtual_shelly"
-VERSION = "0.1.5"
+VERSION = "0.1.6"
 CONF_PORT = "port"
 DEFAULT_NAME = "Virtual Shelly Pro 4PM"
 DEFAULT_PORT = 8124
 CHANNEL_COUNT = 4
-DEVICE_ID = "shellypro4pm-virtual000001"
+DEVICE_ID = "shellypro4pm-020000000001"
 DEVICE_MAC = "020000000001"
 DEVICE_MODEL = "Shelly Pro 4PM"
 DEVICE_MODEL_ID = "SPSW-004PE16EU"
