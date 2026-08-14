@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .const import CHANNEL_COUNT, DEVICE_ID, DEVICE_MAC, DEVICE_MODEL_ID
+from .const import CHANNEL_COUNT, DEVICE_ID, DEVICE_MAC, DEVICE_MODEL_ID, VERSION
 
 StateListener = Callable[[int], None]
 
@@ -60,8 +60,8 @@ class VirtualShellyPro4PM:
             "slot": 0,
             "model": DEVICE_MODEL_ID,
             "gen": 2,
-            "fw_id": "virtual-0.1.0",
-            "ver": "0.1.0",
+            "fw_id": f"virtual-{VERSION}",
+            "ver": VERSION,
             "app": "Pro4PM",
             "auth_en": False,
             "auth_domain": None,

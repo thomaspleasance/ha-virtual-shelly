@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import logging
+from collections import deque
+from datetime import UTC, datetime
 from typing import Any
 
 from aiohttp import web
 
-from .const import CHANNEL_COUNT, DEVICE_ID
+from .const import CHANNEL_COUNT, DEVICE_ID, VERSION
 from .device import VirtualShellyPro4PM
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,11 +31,13 @@ class ShellyRpcServer:
         self._device = device
         self._port = port
         self._runner: web.AppRunner | None = None
+        self._requests: deque[dict[str, str]] = deque(maxlen=200)
 
     async def async_start(self) -> None:
         """Start listening for HTTP requests."""
         app = web.Application()
         app.router.add_get("/shelly", self._handle_device_info)
+        app.router.add_get("/debug/requests", self._handle_debug_requests)
         app.router.add_post("/rpc", self._handle_rpc_frame)
         app.router.add_get("/rpc/{method}", self._handle_method)
         app.router.add_post("/rpc/{method}", self._handle_method)
@@ -50,6 +54,10 @@ class ShellyRpcServer:
     async def _handle_device_info(self, request: web.Request) -> web.Response:
         self._log_request(request, "/shelly")
         return web.json_response(self._device.device_info())
+
+    async def _handle_debug_requests(self, request: web.Request) -> web.Response:
+        """Return safe request metadata captured since the server started."""
+        return web.json_response({"build": VERSION, "requests": list(self._requests)})
 
     async def _handle_rpc_frame(self, request: web.Request) -> web.Response:
         try:
@@ -206,16 +214,26 @@ class ShellyRpcServer:
             "rssi": -45,
         }
 
-    @staticmethod
-    def _log_request(request: web.Request, method: object) -> None:
+    def _log_request(self, request: web.Request, method: object) -> None:
         """Log request metadata without logging potentially sensitive parameters."""
+        remote = request.remote or "unknown"
+        rpc_method = str(method)
+        self._requests.append(
+            {
+                "time": datetime.now(UTC).isoformat(),
+                "remote": remote,
+                "http_method": request.method,
+                "path": request.path,
+                "rpc_method": rpc_method,
+            }
+        )
         # Keep this at warning level while pairing compatibility is being
         # diagnosed: Home Assistant's Logs page does not normally display
         # INFO records from custom integrations.
         _LOGGER.warning(
             "Shelly request from %s: %s %s (RPC method: %s)",
-            request.remote or "unknown",
+            remote,
             request.method,
             request.path,
-            method,
+            rpc_method,
         )
