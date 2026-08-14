@@ -31,7 +31,7 @@ class ShellyMdnsAdvertiser:
             "gen": "2",
             "id": DEVICE_ID,
             "mac": DEVICE_MAC,
-            "app": "Pro4PM",
+            "app": "FourPro",
             "model": DEVICE_MODEL_ID,
         }
         server = f"{DEVICE_ID}.local."

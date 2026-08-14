@@ -47,6 +47,6 @@ The device also advertises `_shelly._tcp.local.` and `_http._tcp.local.` over mD
 
 ## Pairing diagnostics
 
-Every incoming Shelly HTTP/RPC request is shown as a warning in the Home Assistant log under `custom_components.virtual_shelly.server`. Request bodies are deliberately excluded so passwords and other parameters are not logged. Unsupported RPC methods are also logged as warnings, which makes it possible to identify compatibility gaps during pairing. Request logging can be reduced again after pairing compatibility has been confirmed.
+Every incoming Shelly HTTP/RPC request is recorded at info level in the Home Assistant log under `custom_components.virtual_shelly.server`. Request bodies are deliberately excluded so passwords and other parameters are not logged. Unsupported RPC methods are logged as warnings, which makes it possible to identify compatibility gaps during pairing.
 
 The same safe metadata is retained in memory for the most recent 200 requests and is available at `http://localhost:8124/debug/requests`. The response includes the running build number. The history is cleared whenever Home Assistant restarts.

@@ -1,7 +1,7 @@
 """Constants for Virtual Shelly."""
 
 DOMAIN = "virtual_shelly"
-VERSION = "0.1.6"
+VERSION = "0.1.7"
 CONF_PORT = "port"
 DEFAULT_NAME = "Virtual Shelly Pro 4PM"
 DEFAULT_PORT = 8124

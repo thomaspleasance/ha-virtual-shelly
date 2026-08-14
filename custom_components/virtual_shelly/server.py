@@ -125,6 +125,7 @@ class ShellyRpcServer:
                     "Shelly.GetDeviceInfo",
                     "Shelly.GetStatus",
                     "Shelly.ListMethods",
+                    "Input.GetStatus",
                     "WiFi.GetConfig",
                     "WiFi.GetStatus",
                     "Switch.GetConfig",
@@ -164,6 +165,11 @@ class ShellyRpcServer:
                 },
                 "roam": {"rssi_thr": -80, "interval": 60},
             }
+        if method == "Input.GetStatus":
+            channel = self._channel_id(params)
+            if not 0 <= channel < CHANNEL_COUNT:
+                raise RpcError(-103, f"Input id must be between 0 and {CHANNEL_COUNT - 1}")
+            return {"id": channel, "state": False}
         if method in {"Switch.GetConfig", "Switch.GetStatus", "Switch.Set", "Switch.Toggle"}:
             channel = self._channel_id(params)
             if method == "Switch.GetStatus":
@@ -227,10 +233,7 @@ class ShellyRpcServer:
                 "rpc_method": rpc_method,
             }
         )
-        # Keep this at warning level while pairing compatibility is being
-        # diagnosed: Home Assistant's Logs page does not normally display
-        # INFO records from custom integrations.
-        _LOGGER.warning(
+        _LOGGER.info(
             "Shelly request from %s: %s %s (RPC method: %s)",
             remote,
             request.method,
