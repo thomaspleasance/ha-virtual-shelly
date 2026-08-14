@@ -62,7 +62,7 @@ class VirtualShellyPro4PM:
             "gen": 2,
             "fw_id": f"virtual-{VERSION}",
             "ver": VERSION,
-            "app": "Pro4PM",
+            "app": "FourPro",
             "auth_en": False,
             "auth_domain": None,
             "profile": "switch",
