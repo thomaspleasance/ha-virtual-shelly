@@ -27,9 +27,12 @@ class RpcError(Exception):
 class ShellyRpcServer:
     """Serve the subset of Shelly RPC needed for four relay channels."""
 
-    def __init__(self, device: VirtualShellyPro4PM, port: int) -> None:
+    def __init__(
+        self, device: VirtualShellyPro4PM, port: int, diagnostics_enabled: bool = False
+    ) -> None:
         self._device = device
         self._port = port
+        self._diagnostics_enabled = diagnostics_enabled
         self._runner: web.AppRunner | None = None
         self._requests: deque[dict[str, str]] = deque(maxlen=200)
 
@@ -37,7 +40,8 @@ class ShellyRpcServer:
         """Start listening for HTTP requests."""
         app = web.Application()
         app.router.add_get("/shelly", self._handle_device_info)
-        app.router.add_get("/debug/requests", self._handle_debug_requests)
+        if self._diagnostics_enabled:
+            app.router.add_get("/debug/requests", self._handle_debug_requests)
         app.router.add_post("/rpc", self._handle_rpc_frame)
         app.router.add_get("/rpc/{method}", self._handle_method)
         app.router.add_post("/rpc/{method}", self._handle_method)
@@ -224,15 +228,16 @@ class ShellyRpcServer:
         """Log request metadata without logging potentially sensitive parameters."""
         remote = request.remote or "unknown"
         rpc_method = str(method)
-        self._requests.append(
-            {
-                "time": datetime.now(UTC).isoformat(),
-                "remote": remote,
-                "http_method": request.method,
-                "path": request.path,
-                "rpc_method": rpc_method,
-            }
-        )
+        if self._diagnostics_enabled:
+            self._requests.append(
+                {
+                    "time": datetime.now(UTC).isoformat(),
+                    "remote": remote,
+                    "http_method": request.method,
+                    "path": request.path,
+                    "rpc_method": rpc_method,
+                }
+            )
         _LOGGER.info(
             "Shelly request from %s: %s %s (RPC method: %s)",
             remote,

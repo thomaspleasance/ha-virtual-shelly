@@ -14,6 +14,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     CHANNEL_COUNT,
+    CONF_ENABLE_DIAGNOSTICS,
     CONF_NAME,
     CONF_PORT,
     CONF_POWER_ENTITIES,
@@ -33,6 +34,7 @@ CONFIG_SCHEMA = vol.Schema(
             {
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
                 vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
+                vol.Optional(CONF_ENABLE_DIAGNOSTICS, default=False): cv.boolean,
                 vol.Optional(CONF_POWER_ENTITIES, default={}): {
                     vol.All(vol.Coerce(int), vol.Range(min=1, max=CHANNEL_COUNT)): cv.entity_id,
                 },
@@ -94,7 +96,11 @@ async def async_setup_entry(
         return round(value * multipliers.get(unit, 1.0), 3)
 
     device = VirtualShellyPro4PM(settings[CONF_NAME], _read_power)
-    server = ShellyRpcServer(device, settings[CONF_PORT])
+    server = ShellyRpcServer(
+        device,
+        settings[CONF_PORT],
+        settings.get(CONF_ENABLE_DIAGNOSTICS, False),
+    )
     advertiser = ShellyMdnsAdvertiser(hass, settings[CONF_PORT])
 
     try:

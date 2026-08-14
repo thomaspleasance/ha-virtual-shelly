@@ -25,7 +25,7 @@ The integration source is in `custom_components/virtual_shelly`. The development
 4. Open **Settings → Devices & services → Add integration** and select **Virtual Shelly**.
 5. Keep HTTP port `80` for mySigen/Sigenergy compatibility and optionally select a Home Assistant power sensor for each channel.
 
-Use **Configure** on the integration entry to change the device name, port, or channel mappings later. Values reported in mW, W, kW, or MW are converted to watts for Shelly's `apower` response; missing or unavailable sensors report `0 W`.
+Use **Configure** on the integration entry to change the device name, port, channel mappings, or diagnostics setting later. Values reported in mW, W, kW, or MW are converted to watts for Shelly's `apower` response; missing or unavailable sensors report `0 W`.
 
 ### Migrating from YAML
 
@@ -50,4 +50,4 @@ The device also advertises `_shelly._tcp.local.` and `_http._tcp.local.` over mD
 
 Every incoming Shelly HTTP/RPC request is recorded at info level in the Home Assistant log under `custom_components.virtual_shelly.server`. Request bodies are deliberately excluded so passwords and other parameters are not logged. Unsupported RPC methods are logged as warnings, which makes it possible to identify compatibility gaps during pairing.
 
-The same safe metadata is retained in memory for the most recent 200 requests and is available at `http://localhost:8124/debug/requests`. The response includes the running build number. The history is cleared whenever Home Assistant restarts.
+For troubleshooting, enable **Request diagnostics endpoint** from the integration's **Configure** screen. While enabled, safe metadata for the most recent 200 requests is retained in memory and available at `/debug/requests` on the configured Shelly port. The response includes the running build number, excludes request bodies and parameters, and is cleared whenever the integration reloads. Keep this option disabled during normal use because the endpoint is accessible to other devices on the local network.

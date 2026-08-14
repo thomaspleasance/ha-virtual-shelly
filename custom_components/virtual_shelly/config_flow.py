@@ -12,6 +12,7 @@ from homeassistant.helpers import config_validation as cv, selector
 
 from .const import (
     CHANNEL_COUNT,
+    CONF_ENABLE_DIAGNOSTICS,
     CONF_NAME,
     CONF_PORT,
     CONF_POWER_ENTITIES,
@@ -39,6 +40,10 @@ def _schema(settings: dict[str, Any]) -> vol.Schema:
             CONF_PORT,
             description={"suggested_value": settings.get(CONF_PORT, UI_DEFAULT_PORT)},
         ): cv.port,
+        vol.Required(
+            CONF_ENABLE_DIAGNOSTICS,
+            default=settings.get(CONF_ENABLE_DIAGNOSTICS, False),
+        ): bool,
     }
     for channel in range(1, CHANNEL_COUNT + 1):
         entity_id = power_entities.get(channel) or power_entities.get(str(channel))
@@ -58,6 +63,7 @@ def _settings_from_form(user_input: dict[str, Any]) -> dict[str, Any]:
     return {
         CONF_NAME: user_input[CONF_NAME],
         CONF_PORT: user_input[CONF_PORT],
+        CONF_ENABLE_DIAGNOSTICS: user_input[CONF_ENABLE_DIAGNOSTICS],
         CONF_POWER_ENTITIES: {
             channel: entity_id
             for channel in range(1, CHANNEL_COUNT + 1)
@@ -71,6 +77,7 @@ def _settings_from_import(data: dict[str, Any]) -> dict[str, Any]:
     return {
         CONF_NAME: data.get(CONF_NAME, DEFAULT_NAME),
         CONF_PORT: data.get(CONF_PORT, UI_DEFAULT_PORT),
+        CONF_ENABLE_DIAGNOSTICS: data.get(CONF_ENABLE_DIAGNOSTICS, False),
         CONF_POWER_ENTITIES: {
             int(channel): entity_id
             for channel, entity_id in data.get(CONF_POWER_ENTITIES, {}).items()
