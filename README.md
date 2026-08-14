@@ -44,3 +44,7 @@ curl -X POST -H 'Content-Type: application/json' \
 ```
 
 The device also advertises `_shelly._tcp.local.` and `_http._tcp.local.` over mDNS/Bonjour as `shellypro4pm-virtual000001.local`. The records point clients to the configured API port. Docker Desktop networking may prevent multicast announcements from reaching the physical LAN even when they are registered successfully inside the container.
+
+## Pairing diagnostics
+
+Every incoming Shelly HTTP/RPC request is recorded in the Home Assistant log under `custom_components.virtual_shelly.server`. Request bodies are deliberately excluded so passwords and other parameters are not logged. Unsupported RPC methods are logged as warnings, which makes it possible to identify compatibility gaps during pairing.

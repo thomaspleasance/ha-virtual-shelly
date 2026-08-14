@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from aiohttp import web
 
 from .const import CHANNEL_COUNT, DEVICE_ID
 from .device import VirtualShellyPro4PM
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class RpcError(Exception):
@@ -44,13 +47,15 @@ class ShellyRpcServer:
             await self._runner.cleanup()
             self._runner = None
 
-    async def _handle_device_info(self, _request: web.Request) -> web.Response:
+    async def _handle_device_info(self, request: web.Request) -> web.Response:
+        self._log_request(request, "/shelly")
         return web.json_response(self._device.device_info())
 
     async def _handle_rpc_frame(self, request: web.Request) -> web.Response:
         try:
             frame = await request.json()
             request_id = frame.get("id")
+            self._log_request(request, frame.get("method"))
             result = self._dispatch(
                 frame.get("method"),
                 frame.get("params", {}),
@@ -74,6 +79,7 @@ class ShellyRpcServer:
 
     async def _handle_method(self, request: web.Request) -> web.Response:
         try:
+            self._log_request(request, request.match_info["method"])
             if request.method == "POST":
                 params = await request.json() if request.can_read_body else {}
             else:
@@ -161,6 +167,7 @@ class ShellyRpcServer:
             else:
                 previous = self._device.toggle_output(channel)
             return {"was_on": previous}
+        _LOGGER.warning("Unsupported Shelly RPC method requested: %r", method)
         raise RpcError(-32601, f"Method {method!r} not found")
 
     @staticmethod
@@ -198,3 +205,14 @@ class ShellyRpcServer:
             "channel": 1,
             "rssi": -45,
         }
+
+    @staticmethod
+    def _log_request(request: web.Request, method: object) -> None:
+        """Log request metadata without logging potentially sensitive parameters."""
+        _LOGGER.info(
+            "Shelly request from %s: %s %s (RPC method: %s)",
+            request.remote or "unknown",
+            request.method,
+            request.path,
+            method,
+        )
