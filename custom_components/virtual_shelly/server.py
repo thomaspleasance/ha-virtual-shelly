@@ -51,7 +51,11 @@ class ShellyRpcServer:
         try:
             frame = await request.json()
             request_id = frame.get("id")
-            result = self._dispatch(frame.get("method"), frame.get("params", {}))
+            result = self._dispatch(
+                frame.get("method"),
+                frame.get("params", {}),
+                self._local_ip(request),
+            )
             return web.json_response(
                 {"id": request_id, "src": DEVICE_ID, "result": result}
             )
@@ -74,18 +78,28 @@ class ShellyRpcServer:
                 params = await request.json() if request.can_read_body else {}
             else:
                 params = dict(request.query)
-            return web.json_response(self._dispatch(request.match_info["method"], params))
+            return web.json_response(
+                self._dispatch(
+                    request.match_info["method"], params, self._local_ip(request)
+                )
+            )
         except RpcError as err:
             return web.json_response({"code": err.code, "message": err.message})
         except (ValueError, TypeError, web.HTTPBadRequest) as err:
             return web.json_response({"code": -103, "message": str(err)})
 
-    def _dispatch(self, method: str | None, params: dict[str, Any]) -> dict:
+    def _dispatch(
+        self,
+        method: str | None,
+        params: dict[str, Any],
+        local_ip: str | None = None,
+    ) -> dict:
         if method == "Shelly.GetDeviceInfo":
             return self._device.device_info()
         if method == "Shelly.GetStatus":
             return {
                 "sys": {"mac": self._device.device_info()["mac"], "uptime": 0},
+                "wifi": self._wifi_status(local_ip),
                 **{
                     f"switch:{channel}": self._device.switch_status(channel)
                     for channel in range(CHANNEL_COUNT)
@@ -97,11 +111,44 @@ class ShellyRpcServer:
                     "Shelly.GetDeviceInfo",
                     "Shelly.GetStatus",
                     "Shelly.ListMethods",
+                    "WiFi.GetConfig",
+                    "WiFi.GetStatus",
                     "Switch.GetConfig",
                     "Switch.GetStatus",
                     "Switch.Set",
                     "Switch.Toggle",
                 ]
+            }
+        if method in {"WiFi.GetStatus", "Wifi.GetStatus"}:
+            return self._wifi_status(local_ip)
+        if method in {"WiFi.GetConfig", "Wifi.GetConfig"}:
+            return {
+                "ap": {
+                    "ssid": DEVICE_ID,
+                    "is_open": True,
+                    "enable": False,
+                },
+                "sta": {
+                    "ssid": "Virtual Shelly Network",
+                    "is_open": False,
+                    "enable": True,
+                    "ipv4mode": "dhcp",
+                    "ip": None,
+                    "netmask": None,
+                    "gw": None,
+                    "nameserver": None,
+                },
+                "sta1": {
+                    "ssid": None,
+                    "is_open": True,
+                    "enable": False,
+                    "ipv4mode": "dhcp",
+                    "ip": None,
+                    "netmask": None,
+                    "gw": None,
+                    "nameserver": None,
+                },
+                "roam": {"rssi_thr": -80, "interval": 60},
             }
         if method in {"Switch.GetConfig", "Switch.GetStatus", "Switch.Set", "Switch.Toggle"}:
             channel = self._channel_id(params)
@@ -132,3 +179,22 @@ class ShellyRpcServer:
         if isinstance(value, str) and value.lower() in {"true", "false"}:
             return value.lower() == "true"
         raise RpcError(-103, "Parameter 'on' must be true or false")
+
+    @staticmethod
+    def _local_ip(request: web.Request) -> str | None:
+        transport = request.transport
+        if transport is None:
+            return None
+        socket_address = transport.get_extra_info("sockname")
+        return socket_address[0] if socket_address else None
+
+    @staticmethod
+    def _wifi_status(local_ip: str | None) -> dict:
+        return {
+            "sta_ip": local_ip,
+            "status": "got ip" if local_ip else "connected",
+            "ssid": "Virtual Shelly Network",
+            "bssid": "02:00:00:00:00:01",
+            "channel": 1,
+            "rssi": -45,
+        }

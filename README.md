@@ -37,6 +37,7 @@ The four Home Assistant entities are named `switch.virtual_shelly_pro_4pm_channe
 ```bash
 curl http://localhost:8124/shelly
 curl http://localhost:8124/rpc/Switch.GetStatus?id=0
+curl http://localhost:8124/rpc/WiFi.GetStatus
 curl -X POST -H 'Content-Type: application/json' \
   -d '{"id":0,"on":true}' \
   http://localhost:8124/rpc/Switch.Set
