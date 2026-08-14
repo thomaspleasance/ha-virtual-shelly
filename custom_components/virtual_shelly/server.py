@@ -209,7 +209,10 @@ class ShellyRpcServer:
     @staticmethod
     def _log_request(request: web.Request, method: object) -> None:
         """Log request metadata without logging potentially sensitive parameters."""
-        _LOGGER.info(
+        # Keep this at warning level while pairing compatibility is being
+        # diagnosed: Home Assistant's Logs page does not normally display
+        # INFO records from custom integrations.
+        _LOGGER.warning(
             "Shelly request from %s: %s %s (RPC method: %s)",
             request.remote or "unknown",
             request.method,
