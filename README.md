@@ -22,20 +22,14 @@ The integration source is in `custom_components/virtual_shelly`. The development
 1. In HACS, open the three-dot menu and select **Custom repositories**.
 2. Add `https://github.com/thomaspleasance/ha-virtual-shelly` as an **Integration**.
 3. Download **Virtual Shelly** and restart Home Assistant.
-4. Add the following to `configuration.yaml` and restart again:
+4. Open **Settings → Devices & services → Add integration** and select **Virtual Shelly**.
+5. Keep HTTP port `80` for mySigen/Sigenergy compatibility and optionally select a Home Assistant power sensor for each channel.
 
-   ```yaml
-   virtual_shelly:
-     name: Virtual Shelly Pro 4PM
-     port: 80
-     power_entities:
-       1: sensor.channel_1_power
-       2: sensor.channel_2_power
-       3: sensor.channel_3_power
-       4: sensor.channel_4_power
-   ```
+Use **Configure** on the integration entry to change the device name, port, or channel mappings later. Values reported in mW, W, kW, or MW are converted to watts for Shelly's `apower` response; missing or unavailable sensors report `0 W`.
 
-`power_entities` is optional. Map any or all channel numbers to Home Assistant power sensors. Values reported in mW, W, kW, or MW are converted to watts for Shelly's `apower` response; missing or unavailable sensors report `0 W`.
+### Migrating from YAML
+
+Version 0.2.0 imports an existing `virtual_shelly:` YAML block into a UI config entry when Home Assistant starts. After the entry appears under **Settings → Devices & services**, remove the entire `virtual_shelly:` block from `configuration.yaml` and restart once more. The imported name, port, and power sensor mappings are preserved.
 
 ## Try the virtual device
 
@@ -50,7 +44,7 @@ curl -X POST -H 'Content-Type: application/json' \
   http://localhost:8124/rpc/Switch.Set
 ```
 
-The device also advertises `_shelly._tcp.local.` and `_http._tcp.local.` over mDNS/Bonjour as `shellypro4pm-virtual000001.local`. The records point clients to the configured API port. Docker Desktop networking may prevent multicast announcements from reaching the physical LAN even when they are registered successfully inside the container.
+The device also advertises `_shelly._tcp.local.` and `_http._tcp.local.` over mDNS/Bonjour as `shellypro4pm-020000000001.local`. The records point clients to the configured API port. Docker Desktop networking may prevent multicast announcements from reaching the physical LAN even when they are registered successfully inside the container.
 
 ## Pairing diagnostics
 

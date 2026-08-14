@@ -3,24 +3,26 @@
 from __future__ import annotations
 
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from . import VirtualShellyRuntimeData
 from .const import CHANNEL_COUNT, DEVICE_ID, DEVICE_MODEL, DOMAIN, VERSION
 from .device import VirtualShellyPro4PM
 
 
-async def async_setup_platform(
+async def async_setup_entry(
     hass: HomeAssistant,
-    config: ConfigType,
-    async_add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None,
+    entry: ConfigEntry[VirtualShellyRuntimeData],
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up four relay entities."""
-    device: VirtualShellyPro4PM = hass.data[DOMAIN]
-    async_add_entities(VirtualShellySwitch(device, channel) for channel in range(CHANNEL_COUNT))
+    """Set up four relay entities for a config entry."""
+    device = entry.runtime_data.device
+    async_add_entities(
+        VirtualShellySwitch(device, channel) for channel in range(CHANNEL_COUNT)
+    )
 
 
 class VirtualShellySwitch(SwitchEntity):

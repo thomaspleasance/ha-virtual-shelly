@@ -1,0 +1,37 @@
+{
+  "title": "Virtual Shelly",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Virtual Shelly Pro 4PM",
+        "description": "Configure the Shelly-compatible server and optionally map Home Assistant power sensors to its four channels.",
+        "data": {
+          "name": "Device name",
+          "port": "HTTP port",
+          "power_entity_1": "Channel 1 power sensor",
+          "power_entity_2": "Channel 2 power sensor",
+          "power_entity_3": "Channel 3 power sensor",
+          "power_entity_4": "Channel 4 power sensor"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Virtual Shelly is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure Virtual Shelly Pro 4PM",
+        "data": {
+          "name": "Device name",
+          "port": "HTTP port",
+          "power_entity_1": "Channel 1 power sensor",
+          "power_entity_2": "Channel 2 power sensor",
+          "power_entity_3": "Channel 3 power sensor",
+          "power_entity_4": "Channel 4 power sensor"
+        }
+      }
+    }
+  }
+}

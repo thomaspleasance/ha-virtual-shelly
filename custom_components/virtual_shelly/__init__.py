@@ -2,31 +2,39 @@
 
 from __future__ import annotations
 
-import logging
+from dataclasses import dataclass
 
 import voluptuous as vol
 
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-from homeassistant.core import Event, HomeAssistant
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import async_load_platform
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_PORT, CONF_POWER_ENTITIES, DEFAULT_NAME, DEFAULT_PORT, DOMAIN
+from .const import (
+    CHANNEL_COUNT,
+    CONF_NAME,
+    CONF_PORT,
+    CONF_POWER_ENTITIES,
+    DEFAULT_NAME,
+    DEFAULT_PORT,
+    DOMAIN,
+)
 from .device import VirtualShellyPro4PM
 from .mdns import ShellyMdnsAdvertiser
 from .server import ShellyRpcServer
 
-_LOGGER = logging.getLogger(__name__)
+PLATFORMS = [Platform.SWITCH]
 
 CONFIG_SCHEMA = vol.Schema(
     {
         DOMAIN: vol.Schema(
             {
-                vol.Optional("name", default=DEFAULT_NAME): cv.string,
+                vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
                 vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
                 vol.Optional(CONF_POWER_ENTITIES, default={}): {
-                    vol.All(vol.Coerce(int), vol.Range(min=1, max=4)): cv.entity_id,
+                    vol.All(vol.Coerce(int), vol.Range(min=1, max=CHANNEL_COUNT)): cv.entity_id,
                 },
             }
         )
@@ -35,10 +43,37 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
+@dataclass
+class VirtualShellyRuntimeData:
+    """Runtime objects owned by one config entry."""
+
+    device: VirtualShellyPro4PM
+    server: ShellyRpcServer
+    advertiser: ShellyMdnsAdvertiser
+
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up Virtual Shelly from YAML."""
-    integration_config = config[DOMAIN]
-    power_entities = integration_config[CONF_POWER_ENTITIES]
+    """Import a legacy YAML configuration into the UI."""
+    if legacy_config := config.get(DOMAIN):
+        hass.async_create_task(
+            hass.config_entries.flow.async_init(
+                DOMAIN,
+                context={"source": "import"},
+                data=dict(legacy_config),
+            )
+        )
+    return True
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry[VirtualShellyRuntimeData]
+) -> bool:
+    """Set up Virtual Shelly from a config entry."""
+    settings = {**entry.data, **entry.options}
+    power_entities = {
+        int(channel): entity_id
+        for channel, entity_id in settings.get(CONF_POWER_ENTITIES, {}).items()
+    }
 
     def _read_power(channel: int) -> float:
         entity_id = power_entities.get(channel + 1)
@@ -49,18 +84,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             value = float(state.state)
         except (TypeError, ValueError):
             return 0.0
-        unit = state.attributes.get("unit_of_measurement")
         multipliers = {
             "mW": 0.001,
             "W": 1.0,
             "kW": 1000.0,
             "MW": 1_000_000.0,
         }
+        unit = state.attributes.get("unit_of_measurement")
         return round(value * multipliers.get(unit, 1.0), 3)
 
-    device = VirtualShellyPro4PM(integration_config["name"], _read_power)
-    server = ShellyRpcServer(device, integration_config[CONF_PORT])
-    advertiser = ShellyMdnsAdvertiser(hass, integration_config[CONF_PORT])
+    device = VirtualShellyPro4PM(settings[CONF_NAME], _read_power)
+    server = ShellyRpcServer(device, settings[CONF_PORT])
+    advertiser = ShellyMdnsAdvertiser(hass, settings[CONF_PORT])
 
     try:
         await server.async_start()
@@ -69,17 +104,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         await advertiser.async_stop()
         await server.async_stop()
         raise
-    hass.data[DOMAIN] = device
 
-    async def _async_stop(_event: Event) -> None:
-        await advertiser.async_stop()
-        await server.async_stop()
+    entry.runtime_data = VirtualShellyRuntimeData(device, server, advertiser)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    return True
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
-    await async_load_platform(hass, "switch", DOMAIN, {}, config)
 
-    _LOGGER.info(
-        "Virtual Shelly Pro 4PM is listening on port %s and advertising via mDNS",
-        integration_config[CONF_PORT],
-    )
+async def async_unload_entry(
+    hass: HomeAssistant, entry: ConfigEntry[VirtualShellyRuntimeData]
+) -> bool:
+    """Unload a Virtual Shelly config entry."""
+    if not await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        return False
+    await entry.runtime_data.advertiser.async_stop()
+    await entry.runtime_data.server.async_stop()
     return True
