@@ -23,9 +23,9 @@ The integration source is in `custom_components/virtual_shelly`. The development
 2. Add `https://github.com/thomaspleasance/ha-virtual-shelly` as an **Integration**.
 3. Download **Virtual Shelly** and restart Home Assistant.
 4. Open **Settings → Devices & services → Add integration** and select **Virtual Shelly**.
-5. Keep HTTP port `80` for mySigen/Sigenergy compatibility and optionally select a Home Assistant power sensor for each channel.
+5. Keep HTTP port `80` for mySigen/Sigenergy compatibility and optionally select Home Assistant power and cumulative energy sensors for each channel.
 
-Use **Configure** on the integration entry to change the device name, port, channel mappings, or diagnostics setting later. Values reported in mW, W, kW, or MW are converted to watts for Shelly's `apower` response; missing or unavailable sensors report `0 W`.
+Use **Configure** on the integration entry to change the device name, port, channel mappings, or diagnostics setting later. Power values reported in mW, W, kW, or MW are converted to watts for Shelly's `apower` response. Energy values reported in mWh, Wh, kWh, or MWh are converted to watt-hours for `aenergy.total`. Missing or unavailable sensors report zero. The per-minute energy array remains zero because Home Assistant cumulative sensors do not provide the three one-minute buckets expected by Shelly.
 
 ### Migrating from YAML
 

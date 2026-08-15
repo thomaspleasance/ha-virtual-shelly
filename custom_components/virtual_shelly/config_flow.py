@@ -13,6 +13,7 @@ from homeassistant.helpers import config_validation as cv, selector
 from .const import (
     CHANNEL_COUNT,
     CONF_ENABLE_DIAGNOSTICS,
+    CONF_ENERGY_ENTITIES,
     CONF_NAME,
     CONF_PORT,
     CONF_POWER_ENTITIES,
@@ -28,9 +29,14 @@ def _power_key(channel: int) -> str:
     return f"power_entity_{channel}"
 
 
+def _energy_key(channel: int) -> str:
+    return f"energy_entity_{channel}"
+
+
 def _schema(settings: dict[str, Any]) -> vol.Schema:
     """Build the user/options form schema."""
     power_entities = settings.get(CONF_POWER_ENTITIES, {})
+    energy_entities = settings.get(CONF_ENERGY_ENTITIES, {})
     fields: dict[vol.Marker, Any] = {
         vol.Required(
             CONF_NAME,
@@ -55,6 +61,18 @@ def _schema(settings: dict[str, Any]) -> vol.Schema:
         fields[marker] = selector.EntitySelector(
             selector.EntitySelectorConfig(domain="sensor")
         )
+        energy_entity_id = energy_entities.get(channel) or energy_entities.get(
+            str(channel)
+        )
+        energy_marker = vol.Optional(_energy_key(channel))
+        if energy_entity_id:
+            energy_marker = vol.Optional(
+                _energy_key(channel),
+                description={"suggested_value": energy_entity_id},
+            )
+        fields[energy_marker] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain="sensor")
+        )
     return vol.Schema(fields)
 
 
@@ -69,6 +87,11 @@ def _settings_from_form(user_input: dict[str, Any]) -> dict[str, Any]:
             for channel in range(1, CHANNEL_COUNT + 1)
             if (entity_id := user_input.get(_power_key(channel)))
         },
+        CONF_ENERGY_ENTITIES: {
+            channel: entity_id
+            for channel in range(1, CHANNEL_COUNT + 1)
+            if (entity_id := user_input.get(_energy_key(channel)))
+        },
     }
 
 
@@ -81,6 +104,10 @@ def _settings_from_import(data: dict[str, Any]) -> dict[str, Any]:
         CONF_POWER_ENTITIES: {
             int(channel): entity_id
             for channel, entity_id in data.get(CONF_POWER_ENTITIES, {}).items()
+        },
+        CONF_ENERGY_ENTITIES: {
+            int(channel): entity_id
+            for channel, entity_id in data.get(CONF_ENERGY_ENTITIES, {}).items()
         },
     }
 

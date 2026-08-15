@@ -15,6 +15,7 @@ from homeassistant.helpers.typing import ConfigType
 from .const import (
     CHANNEL_COUNT,
     CONF_ENABLE_DIAGNOSTICS,
+    CONF_ENERGY_ENTITIES,
     CONF_NAME,
     CONF_PORT,
     CONF_POWER_ENTITIES,
@@ -35,8 +36,15 @@ CONFIG_SCHEMA = vol.Schema(
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
                 vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
                 vol.Optional(CONF_ENABLE_DIAGNOSTICS, default=False): cv.boolean,
+                vol.Optional(CONF_ENERGY_ENTITIES, default={}): {
+                    vol.All(
+                        vol.Coerce(int), vol.Range(min=1, max=CHANNEL_COUNT)
+                    ): cv.entity_id,
+                },
                 vol.Optional(CONF_POWER_ENTITIES, default={}): {
-                    vol.All(vol.Coerce(int), vol.Range(min=1, max=CHANNEL_COUNT)): cv.entity_id,
+                    vol.All(
+                        vol.Coerce(int), vol.Range(min=1, max=CHANNEL_COUNT)
+                    ): cv.entity_id,
                 },
             }
         )
@@ -76,6 +84,10 @@ async def async_setup_entry(
         int(channel): entity_id
         for channel, entity_id in settings.get(CONF_POWER_ENTITIES, {}).items()
     }
+    energy_entities = {
+        int(channel): entity_id
+        for channel, entity_id in settings.get(CONF_ENERGY_ENTITIES, {}).items()
+    }
 
     def _read_power(channel: int) -> float:
         entity_id = power_entities.get(channel + 1)
@@ -95,7 +107,25 @@ async def async_setup_entry(
         unit = state.attributes.get("unit_of_measurement")
         return round(value * multipliers.get(unit, 1.0), 3)
 
-    device = VirtualShellyPro4PM(settings[CONF_NAME], _read_power)
+    def _read_energy(channel: int) -> float:
+        entity_id = energy_entities.get(channel + 1)
+        state = hass.states.get(entity_id) if entity_id else None
+        if state is None or state.state in {"unknown", "unavailable"}:
+            return 0.0
+        try:
+            value = float(state.state)
+        except (TypeError, ValueError):
+            return 0.0
+        multipliers = {
+            "mWh": 0.001,
+            "Wh": 1.0,
+            "kWh": 1000.0,
+            "MWh": 1_000_000.0,
+        }
+        unit = state.attributes.get("unit_of_measurement")
+        return round(value * multipliers.get(unit, 1.0), 3)
+
+    device = VirtualShellyPro4PM(settings[CONF_NAME], _read_power, _read_energy)
     server = ShellyRpcServer(
         device,
         settings[CONF_PORT],

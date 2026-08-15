@@ -8,15 +8,22 @@ from .const import CHANNEL_COUNT, DEVICE_ID, DEVICE_MAC, DEVICE_MODEL_ID, VERSIO
 
 StateListener = Callable[[int], None]
 PowerReader = Callable[[int], float]
+EnergyReader = Callable[[int], float]
 
 
 class VirtualShellyPro4PM:
     """Represent the four relay outputs of a Shelly Pro 4PM."""
 
-    def __init__(self, name: str, power_reader: PowerReader | None = None) -> None:
+    def __init__(
+        self,
+        name: str,
+        power_reader: PowerReader | None = None,
+        energy_reader: EnergyReader | None = None,
+    ) -> None:
         self.name = name
         self.states = [False] * CHANNEL_COUNT
         self._power_reader = power_reader or (lambda _channel: 0.0)
+        self._energy_reader = energy_reader or (lambda _channel: 0.0)
         self._listeners: set[StateListener] = set()
 
     def add_listener(self, listener: StateListener) -> Callable[[], None]:
@@ -49,7 +56,10 @@ class VirtualShellyPro4PM:
             "voltage": 230.0,
             "current": 0.0,
             "freq": 50.0,
-            "aenergy": {"total": 0.0, "by_minute": [0.0, 0.0, 0.0]},
+            "aenergy": {
+                "total": self._energy_reader(channel),
+                "by_minute": [0.0, 0.0, 0.0],
+            },
             "temperature": {"tC": 25.0, "tF": 77.0},
         }
 
