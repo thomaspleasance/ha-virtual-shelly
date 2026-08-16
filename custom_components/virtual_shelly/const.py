@@ -1,7 +1,7 @@
 """Constants for Virtual Shelly."""
 
 DOMAIN = "virtual_shelly"
-VERSION = "0.2.2"
+VERSION = "0.2.4"
 CONF_NAME = "name"
 CONF_PORT = "port"
 CONF_POWER_ENTITIES = "power_entities"

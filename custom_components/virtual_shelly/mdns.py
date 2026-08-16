@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ipaddress import ip_address
+
 from homeassistant.components import network
 from homeassistant.components.zeroconf import async_get_async_instance
 from homeassistant.core import HomeAssistant
@@ -26,7 +28,13 @@ class ShellyMdnsAdvertiser:
 
     async def async_start(self) -> None:
         """Register the virtual device's mDNS services."""
-        addresses = await network.async_get_announce_addresses(self._hass)
+        addresses = [
+            address
+            for address in await network.async_get_announce_addresses(self._hass)
+            if ip_address(address.split("%", 1)[0]).version == 4
+        ]
+        if not addresses:
+            raise RuntimeError("Virtual Shelly requires an IPv4 address for discovery")
         properties = {
             "gen": "2",
             "id": DEVICE_ID,

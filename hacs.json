@@ -1,3 +1,4 @@
 {
-  "name": "Virtual Shelly"
+  "name": "Virtual Shelly",
+  "hide_default_branch": true
 }
