@@ -9,7 +9,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import VirtualShellyRuntimeData
-from .const import CHANNEL_COUNT, DEVICE_ID, DEVICE_MODEL, DOMAIN, VERSION
+from .const import CHANNEL_COUNT, DEVICE_MODEL, DOMAIN, VERSION
 from .device import VirtualShellyPro4PM
 
 
@@ -35,9 +35,9 @@ class VirtualShellySwitch(SwitchEntity):
         self._device = device
         self._channel = channel
         self._attr_name = f"Channel {channel + 1}"
-        self._attr_unique_id = f"{DEVICE_ID}-switch-{channel}"
+        self._attr_unique_id = f"{device.device_id}-switch-{channel}"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, DEVICE_ID)},
+            identifiers={(DOMAIN, device.device_id)},
             name=device.name,
             manufacturer="Shelly (virtual)",
             model=DEVICE_MODEL,

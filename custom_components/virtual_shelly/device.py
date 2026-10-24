@@ -2,13 +2,35 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 
-from .const import CHANNEL_COUNT, DEVICE_ID, DEVICE_MAC, DEVICE_MODEL_ID, VERSION
+from .const import (
+    CHANNEL_COUNT,
+    DEVICE_ID_PREFIX,
+    DEVICE_MODEL_ID,
+    LEGACY_MAC,
+    VERSION,
+)
 
 StateListener = Callable[[int], None]
 PowerReader = Callable[[int], float]
 EnergyReader = Callable[[int], float]
+
+
+def device_id_for_mac(mac: str) -> str:
+    """Return the Shelly device id for a MAC address."""
+    return f"{DEVICE_ID_PREFIX}{mac.lower()}"
+
+
+def next_mac(existing: Iterable[str]) -> str:
+    """Return the next unused MAC address after the highest existing one."""
+    ints = []
+    for mac in existing:
+        try:
+            ints.append(int(mac, 16))
+        except (TypeError, ValueError):
+            continue
+    return f"{max(ints, default=int(LEGACY_MAC, 16) - 1) + 1:012X}"
 
 
 class VirtualShellyPro4PM:
@@ -17,10 +39,13 @@ class VirtualShellyPro4PM:
     def __init__(
         self,
         name: str,
+        mac: str,
         power_reader: PowerReader | None = None,
         energy_reader: EnergyReader | None = None,
     ) -> None:
         self.name = name
+        self.mac = mac.upper()
+        self.device_id = device_id_for_mac(mac)
         self.states = [False] * CHANNEL_COUNT
         self._power_reader = power_reader or (lambda _channel: 0.0)
         self._energy_reader = energy_reader or (lambda _channel: 0.0)
@@ -66,8 +91,8 @@ class VirtualShellyPro4PM:
     def device_info(self) -> dict:
         """Return the Gen2 device-information response."""
         return {
-            "id": DEVICE_ID,
-            "mac": DEVICE_MAC,
+            "id": self.device_id,
+            "mac": self.mac,
             "model": DEVICE_MODEL_ID,
             "gen": 2,
             "fw_id": f"virtual-{VERSION}",

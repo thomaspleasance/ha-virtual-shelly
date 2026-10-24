@@ -3,10 +3,11 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up Virtual Shelly Pro 4PM",
-        "description": "Configure the Shelly-compatible server and optionally map Home Assistant power sensors to its four channels.",
+        "title": "Add a Virtual Shelly Pro 4PM",
+        "description": "Configure the Shelly-compatible server and optionally map Home Assistant power sensors to its four channels. Each virtual Shelly needs its own IP address when using port 80.",
         "data": {
           "name": "Device name",
+          "host": "Listen IP address",
           "port": "HTTP port",
           "enable_diagnostics": "Enable request diagnostics endpoint",
           "power_entity_1": "Channel 1 power sensor",
@@ -17,8 +18,15 @@
           "energy_entity_3": "Channel 3 total energy sensor",
           "power_entity_4": "Channel 4 power sensor",
           "energy_entity_4": "Channel 4 total energy sensor"
+        },
+        "data_description": {
+          "host": "IPv4 address the Shelly API listens on and advertises over mDNS. Use 0.0.0.0 to listen on all addresses."
         }
       }
+    },
+    "error": {
+      "invalid_host": "Enter a valid IPv4 address.",
+      "address_in_use": "Another Virtual Shelly already uses this IP address and port."
     },
     "abort": {
       "already_configured": "Virtual Shelly is already configured."
@@ -30,6 +38,7 @@
         "title": "Configure Virtual Shelly Pro 4PM",
         "data": {
           "name": "Device name",
+          "host": "Listen IP address",
           "port": "HTTP port",
           "enable_diagnostics": "Enable request diagnostics endpoint",
           "power_entity_1": "Channel 1 power sensor",
@@ -40,8 +49,15 @@
           "energy_entity_3": "Channel 3 total energy sensor",
           "power_entity_4": "Channel 4 power sensor",
           "energy_entity_4": "Channel 4 total energy sensor"
+        },
+        "data_description": {
+          "host": "IPv4 address the Shelly API listens on and advertises over mDNS. Use 0.0.0.0 to listen on all addresses."
         }
       }
+    },
+    "error": {
+      "invalid_host": "Enter a valid IPv4 address.",
+      "address_in_use": "Another Virtual Shelly already uses this IP address and port."
     }
   }
 }

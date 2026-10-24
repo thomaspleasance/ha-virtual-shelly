@@ -3,25 +3,31 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from ipaddress import ip_address
 
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
+    ALL_ADDRESSES,
     CHANNEL_COUNT,
     CONF_ENABLE_DIAGNOSTICS,
     CONF_ENERGY_ENTITIES,
+    CONF_HOST,
+    CONF_MAC,
     CONF_NAME,
     CONF_PORT,
     CONF_POWER_ENTITIES,
     DEFAULT_NAME,
     DEFAULT_PORT,
     DOMAIN,
+    LEGACY_MAC,
 )
 from .device import VirtualShellyPro4PM
 from .mdns import ShellyMdnsAdvertiser
@@ -29,10 +35,22 @@ from .server import ShellyRpcServer
 
 PLATFORMS = [Platform.SWITCH]
 
+
+def _ipv4_address(value: str) -> str:
+    """Validate that the value is an IPv4 address."""
+    try:
+        if ip_address(value).version != 4:
+            raise ValueError("not an IPv4 address")
+    except ValueError as err:
+        raise vol.Invalid("not a valid IPv4 address") from err
+    return value
+
+
 CONFIG_SCHEMA = vol.Schema(
     {
         DOMAIN: vol.Schema(
             {
+                vol.Optional(CONF_HOST): vol.All(cv.string, _ipv4_address),
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
                 vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
                 vol.Optional(CONF_ENABLE_DIAGNOSTICS, default=False): cv.boolean,
@@ -125,17 +143,30 @@ async def async_setup_entry(
         unit = state.attributes.get("unit_of_measurement")
         return round(value * multipliers.get(unit, 1.0), 3)
 
-    device = VirtualShellyPro4PM(settings[CONF_NAME], _read_power, _read_energy)
+    host = settings.get(CONF_HOST, ALL_ADDRESSES)
+
+    device = VirtualShellyPro4PM(
+        settings[CONF_NAME], entry.data[CONF_MAC], _read_power, _read_energy
+    )
     server = ShellyRpcServer(
         device,
+        host,
         settings[CONF_PORT],
         settings.get(CONF_ENABLE_DIAGNOSTICS, False),
     )
-    advertiser = ShellyMdnsAdvertiser(hass, settings[CONF_PORT])
+    advertiser = ShellyMdnsAdvertiser(
+        hass, device.device_id, device.mac, host, settings[CONF_PORT]
+    )
 
     try:
         await server.async_start()
         await advertiser.async_start()
+    except OSError as err:
+        await advertiser.async_stop()
+        await server.async_stop()
+        raise ConfigEntryNotReady(
+            f"Cannot listen on {host}:{settings[CONF_PORT]}: {err}"
+        ) from err
     except Exception:
         await advertiser.async_stop()
         await server.async_stop()
@@ -143,6 +174,23 @@ async def async_setup_entry(
 
     entry.runtime_data = VirtualShellyRuntimeData(device, server, advertiser)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Give entries created before per-instance MACs the legacy identity."""
+    if entry.version > 1:
+        return False
+    if entry.version == 1 and entry.minor_version < 2:
+        hass.config_entries.async_update_entry(
+            entry,
+            data={
+                **entry.data,
+                CONF_HOST: entry.data.get(CONF_HOST, ALL_ADDRESSES),
+                CONF_MAC: entry.data.get(CONF_MAC, LEGACY_MAC),
+            },
+            minor_version=2,
+        )
     return True
 
 

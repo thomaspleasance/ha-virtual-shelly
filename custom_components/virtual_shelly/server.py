@@ -9,7 +9,7 @@ from typing import Any
 
 from aiohttp import web
 
-from .const import CHANNEL_COUNT, DEVICE_ID, VERSION
+from .const import CHANNEL_COUNT, VERSION
 from .device import VirtualShellyPro4PM
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,9 +28,14 @@ class ShellyRpcServer:
     """Serve the subset of Shelly RPC needed for four relay channels."""
 
     def __init__(
-        self, device: VirtualShellyPro4PM, port: int, diagnostics_enabled: bool = False
+        self,
+        device: VirtualShellyPro4PM,
+        host: str,
+        port: int,
+        diagnostics_enabled: bool = False,
     ) -> None:
         self._device = device
+        self._host = host
         self._port = port
         self._diagnostics_enabled = diagnostics_enabled
         self._runner: web.AppRunner | None = None
@@ -47,7 +52,7 @@ class ShellyRpcServer:
         app.router.add_post("/rpc/{method}", self._handle_method)
         self._runner = web.AppRunner(app)
         await self._runner.setup()
-        await web.TCPSite(self._runner, "0.0.0.0", self._port).start()
+        await web.TCPSite(self._runner, self._host, self._port).start()
 
     async def async_stop(self) -> None:
         """Stop the HTTP server."""
@@ -74,19 +79,27 @@ class ShellyRpcServer:
                 self._local_ip(request),
             )
             return web.json_response(
-                {"id": request_id, "src": DEVICE_ID, "result": result}
+                {
+                    "id": request_id,
+                    "src": self._device.device_id,
+                    "result": result,
+                }
             )
         except RpcError as err:
             return web.json_response(
                 {
                     "id": frame.get("id") if "frame" in locals() else None,
-                    "src": DEVICE_ID,
+                    "src": self._device.device_id,
                     "error": {"code": err.code, "message": err.message},
                 }
             )
         except (ValueError, TypeError, web.HTTPBadRequest) as err:
             return web.json_response(
-                {"id": None, "src": DEVICE_ID, "error": {"code": -103, "message": str(err)}}
+                {
+                    "id": None,
+                    "src": self._device.device_id,
+                    "error": {"code": -103, "message": str(err)},
+                }
             )
 
     async def _handle_method(self, request: web.Request) -> web.Response:
@@ -143,7 +156,7 @@ class ShellyRpcServer:
         if method in {"WiFi.GetConfig", "Wifi.GetConfig"}:
             return {
                 "ap": {
-                    "ssid": DEVICE_ID,
+                    "ssid": self._device.device_id,
                     "is_open": True,
                     "enable": False,
                 },
@@ -238,7 +251,7 @@ class ShellyRpcServer:
                     "rpc_method": rpc_method,
                 }
             )
-        _LOGGER.info(
+        _LOGGER.debug(
             "Shelly request from %s: %s %s (RPC method: %s)",
             remote,
             request.method,
